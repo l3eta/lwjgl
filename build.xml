@@ -485,6 +485,12 @@
 		</condition>
 		<antcall target="-compile_native_win32" />
 
+
+		<condition property="lwjgl.platform.arm">
+			<os name="Linux" />
+		</condition>
+		<antcall target="-compile_native_arm" />
+
 		<condition property="lwjgl.platform.linux">
 			<os name="Linux" />
 		</condition>
@@ -524,6 +530,13 @@
 	<target name="-compile_native_linux" if="lwjgl.platform.linux">
 		<ant antfile="platform_build/linux_ant/build.xml" inheritAll="false"/>
 		<copy todir="${lwjgl.lib}/linux">
+			<fileset dir="${lwjgl.bin}/lwjgl" includes="liblwjgl*.so"/>
+		</copy>
+		<!-- headless issues <version-check platform="linux"/> -->
+	</target>
+	<target name="-compile_native_arm" if="lwjgl.platform.arm">
+		<ant antfile="platform_build/arm_ant/build.xml" inheritAll="false"/>
+		<copy todir="${lwjgl.lib}/arm">
 			<fileset dir="${lwjgl.bin}/lwjgl" includes="liblwjgl*.so"/>
 		</copy>
 		<!-- headless issues <version-check platform="linux"/> -->

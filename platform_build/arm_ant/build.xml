@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+
+<project name="lwjgl native code, linux" basedir="../../bin/lwjgl" default="compile">
+	<property name="native" location="../../src/native"/>
+	<property name="libname_arm" value="liblwjglarm.so"/>
+	<property name="libs_arm" value="-L/usr/X11R6/lib -L/usr/X11/lib -lm -lX11 -lXext -lXcursor -lXrandr -lXxf86vm -lpthread -L${java.home}/lib/arm -ljawt" />
+	<property name="cflags_arm" value="-O2 -Wall -c -fPIC -std=c99 -Wunused"/>
+
+	<target name="clean">
+		<delete>
+			<fileset dir="arm"/>
+			<fileset dir="." includes="*.o"/>
+			<fileset dir="." includes="*.so"/>
+		</delete>
+	</target>
+
+    <target name="compile">
+	<exec executable="uname" outputproperty="hwplatform">
+		<arg value="-m"/>
+	</exec>
+	<condition property="cflags_pthread" value="-pthreads" else="-pthread">
+		<os name="SunOS" />
+	</condition>
+	<condition property="version_script_flags_arm" value="" else="-Wl,--version-script='${native}/linux/lwjgl.map'">
+		<os name="SunOS" />
+	</condition>
+
+	<property name="linker_flags_arm" value="${version_script_flags_arm} -shared -O2 -Wall -o ${libname_arm} ${libs_arm}"/>
+
+    	<antcall target="compile_arm"/>
+    </target>
+
+    <target name="compile_arm">
+    	<mkdir dir="arm"/>
+    	<apply dir="arm" executable="gcc" skipemptyfilesets="true" failonerror="true" parallel="true">
+			<arg line="${cflags_arm} ${cflags_pthread}"/>
+			<arg value="-I${java.home}/include"/>
+			<arg value="-I${java.home}/include/linux"/>
+			<arg value="-I${java.home}/../include"/>
+			<arg value="-I${java.home}/../include/linux"/>
+			<arg value="-I${java.home}/../include/solaris"/>
+			<arg value="-I${native}/common"/>
+		    <arg value="-I${native}/common/opengl"/>
+			<arg value="-I${native}/linux"/>
+		    <arg value="-I${native}/linux/opengl"/>
+			<mapper type="glob" from="*.c" to="*.o"/>
+		    <fileset dir="${native}/common" includes="*.c"/>
+		    <fileset dir="${native}/common/opengl" includes="*.c"/>
+		    <fileset dir="${native}/generated/openal" includes="*.c"/>
+		    <fileset dir="${native}/generated/opencl" includes="*.c"/>
+		    <fileset dir="${native}/generated/opengl" includes="*.c"/>
+		    <fileset dir="${native}/linux" includes="*.c"/>
+		    <fileset dir="${native}/linux/opengl" includes="*.c"/>
+	    </apply>
+		<apply dir="." parallel="true" executable="gcc" failonerror="true">
+			<srcfile/>
+			<arg line="${linker_flags_arm}"/>
+			<fileset dir="arm" includes="*.o"/>
+		</apply>
+		<apply dir="." parallel="true" executable="strip" failonerror="true">
+			<fileset file="${libname_arm}"/>
+		</apply>
+    </target>
+</project>

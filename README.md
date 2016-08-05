@@ -1,4 +1,4 @@
-LWJGL 2.9.4 - Lightweight Java Game Library Fork with armv7l support (No OpenAL yet) 
+LWJGL 2.9.4 - Lightweight Java Game Library Fork
 ======
 This is a fork of LWJGL 2.9.4. I will be making edits to a couple things along the way of playing around with my ARM laptop.
 

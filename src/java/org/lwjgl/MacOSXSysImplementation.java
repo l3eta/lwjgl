@@ -32,36 +32,34 @@
 package org.lwjgl;
 
 import com.apple.eio.FileManager;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
-import java.lang.UnsatisfiedLinkError;
 
 /**
  *
  * @author elias_naur <elias_naur@users.sourceforge.net>
- * @version $Revision$
- * $Id$
+ * @version $Revision$ $Id$
  */
 final class MacOSXSysImplementation extends J2SESysImplementation {
-	private static final int JNI_VERSION = 25;
 
-	static {
-		// Manually start the AWT Application Loop
-		java.awt.Toolkit.getDefaultToolkit();
-	}
-	
-	public int getRequiredJNIVersion() {
-		return JNI_VERSION;
-	}
+    private static final int JNI_VERSION = 25;
 
-	public boolean openURL(String url) {
-		try {
-			FileManager.openURL(url);
-			return true;
-		} catch (Exception e) {
-			LWJGLUtil.log("Exception occurred while trying to invoke browser: " + e);
-			return false;
-		}
-	}
+    static {
+        // Manually start the AWT Application Loop
+        java.awt.Toolkit.getDefaultToolkit();
+    }
+
+    @Override
+    public int getRequiredJNIVersion() {
+        return JNI_VERSION;
+    }
+
+    @Override
+    public boolean openURL(String url) {
+        try {
+            FileManager.openURL(url);
+            return true;
+        } catch (Exception e) {
+            LWJGLUtil.log("Exception occurred while trying to invoke browser: " + e);
+            return false;
+        }
+    }
 }

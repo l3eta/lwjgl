@@ -15,17 +15,17 @@
 	</target>
 
     <target name="compile">
-	<exec executable="uname" outputproperty="hwplatform">
-		<arg value="-m"/>
-	</exec>
-	<condition property="cflags_pthread" value="-pthreads" else="-pthread">
-		<os name="SunOS" />
-	</condition>
-	<condition property="version_script_flags_arm" value="" else="-Wl,--version-script='${native}/linux/lwjgl.map'">
-		<os name="SunOS" />
-	</condition>
+		<exec executable="uname" outputproperty="hwplatform">
+			<arg value="-m"/>
+		</exec>
+		<condition property="cflags_pthread" value="-pthreads" else="-pthread">
+			<os name="SunOS" />
+		</condition>
+		<condition property="version_script_flags_arm" value="" else="-Wl,--version-script='${native}/linux/lwjgl.map'">
+			<os name="SunOS" />
+		</condition>
 
-	<property name="linker_flags_arm" value="${version_script_flags_arm} -shared -O2 -Wall -o ${libname_arm} ${libs_arm}"/>
+		<property name="linker_flags_arm" value="${version_script_flags_arm} -shared -O2 -Wall -o ${libname_arm} ${libs_arm}"/>
 
     	<antcall target="compile_arm"/>
     </target>

@@ -1,3 +1,6 @@
+nbbuild.xml
+manifest.mf
+applet.policy
 *.*~
 .*.sw[a-p]
 /.classpath
@@ -17,6 +20,7 @@
 /src/native/*/org_lwjgl_*.h
 /src/native/*/*/org_lwjgl_*.h
 /src/native/linux/org_lwjgl_opengl_Display.c
-
-nbproject/project.xml
+/nbproject/
+/nbproject/project.xml
 /nbproject/private/
+/build/

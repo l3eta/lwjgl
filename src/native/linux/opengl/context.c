@@ -68,11 +68,13 @@ XVisualInfo *getVisualInfoFromPeerInfo(JNIEnv *env, X11PeerInfo *peer_info) {
 		}
 	} else {
 		GLXFBConfig *configs = getFBConfigFromPeerInfo(env, peer_info);
-		if (configs == NULL)
+		if (configs == NULL) {
 			return NULL;
+		}
 		vis_info = lwjgl_glXGetVisualFromFBConfig(peer_info->display, configs[0]);
-		if (vis_info == NULL)
+		if (vis_info == NULL) {
 			throwException(env, "Could not get VisualInfo from GLX 1.3 config");
+		}
 		XFree(configs);
 	}
 	return vis_info;
@@ -135,13 +137,13 @@ static GLXFBConfig *chooseVisualGLX13FromBPP(JNIEnv *env, Display *disp, int scr
 	initAttribList(&attrib_list);
 	int render_type;
 	
-	if ( floating_point )
+	if (floating_point) { 
 		render_type = GLX_RGBA_FLOAT_BIT;
-	else if ( floating_point_packed )
+	} else if (floating_point_packed) {
 		render_type = GLX_RGBA_UNSIGNED_FLOAT_BIT_EXT;
-	else
+	} else {
 		render_type = GLX_RGBA_BIT;
-		
+	}
 	putAttrib(&attrib_list, GLX_RENDER_TYPE); putAttrib(&attrib_list, render_type);
 	putAttrib(&attrib_list, GLX_DOUBLEBUFFER); putAttrib(&attrib_list, double_buffer ? True : False);
 	putAttrib(&attrib_list, GLX_DRAWABLE_TYPE); putAttrib(&attrib_list, drawable_type);
@@ -163,7 +165,7 @@ static GLXFBConfig *chooseVisualGLX13FromBPP(JNIEnv *env, Display *disp, int scr
 	if (samples > 0) {
 		putAttrib(&attrib_list, GLX_SAMPLE_BUFFERS_ARB); putAttrib(&attrib_list, 1);
 		putAttrib(&attrib_list, GLX_SAMPLES_ARB); putAttrib(&attrib_list, samples); // GLX_COVERAGE_SAMPLES_NV if colorSamples > 0
-        if ( colorSamples > 0 ) {
+        if (colorSamples > 0) {
             putAttrib(&attrib_list, GLX_COLOR_SAMPLES_NV); putAttrib(&attrib_list, colorSamples);
         }
 	}
@@ -176,8 +178,9 @@ static GLXFBConfig *chooseVisualGLX13FromBPP(JNIEnv *env, Display *disp, int scr
 	if (num_formats > 0) {
 		return configs;
 	} else {
-		if (configs != NULL)
+		if (configs != NULL) {
 			XFree(configs);
+		}
 		return NULL;
 	}
 }
@@ -188,12 +191,14 @@ GLXFBConfig *chooseVisualGLX13(JNIEnv *env, Display *disp, int screen, jobject p
 	if (use_display_bpp) {
 		bpp = XDefaultDepthOfScreen(XScreenOfDisplay(disp, screen));
 		GLXFBConfig *configs = chooseVisualGLX13FromBPP(env, disp, screen, pixel_format, bpp, drawable_type, double_buffer);
-		if (configs != NULL)
+		if (configs != NULL) {
 			return configs;
-		else
+		} else {
 			bpp = 16;
-	} else
+		}
+	} else {
 		bpp = (int)(*env)->GetIntField(env, pixel_format, (*env)->GetFieldID(env, cls_pixel_format, "bpp", "I"));
+	}
 	return chooseVisualGLX13FromBPP(env, disp, screen, pixel_format, bpp, drawable_type, double_buffer);
 }
 
@@ -228,17 +233,20 @@ static XVisualInfo *chooseVisualGLXFromBPP(JNIEnv *env, Display *disp, int scree
 	putAttrib(&attrib_list, GLX_ACCUM_GREEN_SIZE); putAttrib(&attrib_list, accum_bpe);
 	putAttrib(&attrib_list, GLX_ACCUM_BLUE_SIZE); putAttrib(&attrib_list, accum_bpe);
 	putAttrib(&attrib_list, GLX_ACCUM_ALPHA_SIZE); putAttrib(&attrib_list, accum_alpha);
-	if (stereo)
+	if (stereo) {
 		putAttrib(&attrib_list, GLX_STEREO);
+	}
 	// Assume the caller has checked support for multisample
 	if (samples > 0) {
 		putAttrib(&attrib_list, GLX_SAMPLE_BUFFERS_ARB); putAttrib(&attrib_list, 1);
 		putAttrib(&attrib_list, GLX_SAMPLES_ARB); putAttrib(&attrib_list, samples); // GLX_COVERAGE_SAMPLES_NV if colorSamples > 0
-        if ( colorSamples > 0 )
+        if (colorSamples > 0) {
             putAttrib(&attrib_list, GLX_COLOR_SAMPLES_NV); putAttrib(&attrib_list, colorSamples);
+		}
 	}
-	if (sRGB)
+	if (sRGB) {
 		putAttrib(&attrib_list, GLX_FRAMEBUFFER_SRGB_CAPABLE_ARB);
+	}
 	putAttrib(&attrib_list, None);
 	return lwjgl_glXChooseVisual(disp, screen, attrib_list.attribs);
 }
@@ -249,12 +257,14 @@ XVisualInfo *chooseVisualGLX(JNIEnv *env, Display *disp, int screen, jobject pix
 	if (use_display_bpp) {
 		bpp = XDefaultDepthOfScreen(XScreenOfDisplay(disp, screen));
 		XVisualInfo *vis_info = chooseVisualGLXFromBPP(env, disp, screen, pixel_format, bpp, double_buffer);
-		if (vis_info != NULL)
+		if (vis_info != NULL) {
 			return vis_info;
-		else
+		} else {
 			bpp = 16;
-	} else
+		}
+	} else {
 		bpp = (int)(*env)->GetIntField(env, pixel_format, (*env)->GetFieldID(env, cls_pixel_format, "bpp", "I"));
+	}
 	return chooseVisualGLXFromBPP(env, disp, screen, pixel_format, bpp, double_buffer);
 }
 
@@ -312,9 +322,9 @@ bool initPeerInfo(JNIEnv *env, jobject peer_info_handle, Display *display, int s
 		return false;
 	}
 	bool sRGB = (bool)(*env)->GetBooleanField(env, pixel_format, (*env)->GetFieldID(env, cls_pixel_format, "sRGB", "Z"));
-		if (sRGB && !extension_flags.GLX_ARB_framebuffer_sRGB) {
-			throwException(env, "sRGB specified but there's no support for GLX_ARB_framebuffer_sRGB");
-			return false;
+	if (sRGB && !extension_flags.GLX_ARB_framebuffer_sRGB) {
+		throwException(env, "sRGB specified but there's no support for GLX_ARB_framebuffer_sRGB");
+		return false;
 	}
 
 	peer_info->glx13 = extension_flags.GLX13;
@@ -348,8 +358,9 @@ bool initPeerInfo(JNIEnv *env, jobject peer_info_handle, Display *display, int s
 		peer_info->config.glx_config.visualid = vis_info->visualid;
 		peer_info->config.glx_config.depth = vis_info->depth;
 		peer_info->screen = vis_info->screen;
-		if (isDebugEnabled())
+		if (isDebugEnabled()) {
 			dumpVisualInfo(env, display, &extension_flags, vis_info);
+		}
 		XFree(vis_info);
 	}
 	peer_info->display = display;

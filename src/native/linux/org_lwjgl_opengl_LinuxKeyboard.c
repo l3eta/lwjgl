@@ -56,8 +56,7 @@ JNIEXPORT jlong JNICALL Java_org_lwjgl_opengl_LinuxKeyboard_getModifierMapping(J
 JNIEXPORT jboolean JNICALL Java_org_lwjgl_opengl_LinuxKeyboard_nSetDetectableKeyRepeat(JNIEnv *env, jclass unused, jlong display_ptr, jboolean set_enabled) {
 	Display *disp = (Display *)(intptr_t)display_ptr;
 	Bool enabled = set_enabled == JNI_TRUE ? True : False;
-	Bool result = XkbSetDetectableAutoRepeat(disp, enabled, NULL);
-	return result == enabled ? JNI_TRUE : JNI_FALSE;
+	return XkbSetDetectableAutoRepeat(disp, enabled, NULL) == enabled ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT void JNICALL Java_org_lwjgl_opengl_LinuxKeyboard_freeModifierMapping(JNIEnv *env, jclass unused, jlong mapping_ptr) {
@@ -72,21 +71,18 @@ JNIEXPORT jint JNICALL Java_org_lwjgl_opengl_LinuxKeyboard_getMaxKeyPerMod(JNIEn
 
 JNIEXPORT jint JNICALL Java_org_lwjgl_opengl_LinuxKeyboard_lookupModifierMap(JNIEnv *env, jclass unused, jlong mapping_ptr, jint index) {
 	XModifierKeymap *modifier_map = (XModifierKeymap *)(intptr_t)mapping_ptr;
-	KeyCode key_code = modifier_map->modifiermap[index];
-	return key_code;
+	return modifier_map->modifiermap[index];
 }
 
 JNIEXPORT jlong JNICALL Java_org_lwjgl_opengl_LinuxKeyboard_keycodeToKeySym(JNIEnv *env, jclass unused, jlong display_ptr, jint key_code) {
 	Display *disp = (Display *)(intptr_t)display_ptr;
-	KeySym key_sym = XKeycodeToKeysym(disp, key_code, 0);
-	return key_sym;
+	return XkbKeycodeToKeysym(disp, key_code, 0, 0);
 }
 
 JNIEXPORT jlong JNICALL Java_org_lwjgl_opengl_LinuxKeyboard_openIM(JNIEnv *env, jclass unused, jlong display_ptr) {
 	Display *disp = (Display *)(intptr_t)display_ptr;
 	XSetLocaleModifiers ("@im=none");
-	XIM xim = XOpenIM(disp, NULL, NULL, NULL);
-	return (intptr_t)xim;
+	return (intptr_t)XOpenIM(disp, NULL, NULL, NULL);
 }
 
 JNIEXPORT jlong JNICALL Java_org_lwjgl_opengl_LinuxKeyboard_createIC(JNIEnv *env, jclass unused, jlong xim_ptr, jlong window_ptr) {

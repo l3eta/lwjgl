@@ -31,128 +31,140 @@
  */
 package org.lwjgl.opencl;
 
+import java.nio.ByteBuffer;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.LWJGLUtil;
 import org.lwjgl.MemoryUtil;
 import org.lwjgl.Sys;
 
-import java.nio.ByteBuffer;
-
 /**
- * LWJGL users must use this class to initialize OpenCL
- * before using any other class in the org.lwjgl.opencl package.
+ * LWJGL users must use this class to initialize OpenCL before using any other
+ * class in the org.lwjgl.opencl package.
  *
  * @author Spasi
  */
 public final class CL {
 
-	private static boolean created;
+    private static boolean created;
 
-	static {
-		Sys.initialize();
-	}
+    static {
+        Sys.initialize();
+    }
 
-	private CL() {
-	}
+    private CL() {
+    }
 
-	/**
-	 * Native method to create CL instance
-	 *
-	 * @param oclPaths Array of strings containing paths to search for OpenCL library
-	 */
-	private static native void nCreate(String oclPaths) throws LWJGLException;
+    /**
+     * Native method to create CL instance
+     *
+     * @param oclPaths Array of strings containing paths to search for OpenCL
+     * library
+     */
+    private static native void nCreate(String oclPaths) throws LWJGLException;
 
-	/**
-	 * Native method to create CL instance from the Mac OS X 10.4 OpenCL framework.
-	 * It is only defined in the Mac OS X native library.
-	 */
-	private static native void nCreateDefault() throws LWJGLException;
+    /**
+     * Native method to create CL instance from the Mac OS X 10.4 OpenCL
+     * framework. It is only defined in the Mac OS X native library.
+     */
+    private static native void nCreateDefault() throws LWJGLException;
 
-	/** Native method the destroy the CL */
-	private static native void nDestroy();
+    /**
+     * Native method the destroy the CL
+     */
+    private static native void nDestroy();
 
-	/** @return true if CL has been created */
-	public static boolean isCreated() {
-		return created;
-	}
+    /**
+     * @return true if CL has been created
+     */
+    public static boolean isCreated() {
+        return created;
+    }
 
-	public static void create() throws LWJGLException {
-		if ( created )
-			return;
-		//throw new IllegalStateException("OpenCL has already been created.");
+    public static void create() throws LWJGLException {
+        if (created) {
+            return;
+        }
+        //throw new IllegalStateException("OpenCL has already been created.");
 
-		final String libname;
-		final String[] library_names;
-		switch ( LWJGLUtil.getPlatform() ) {
-			case LWJGLUtil.PLATFORM_WINDOWS:
-				libname = "OpenCL";
-				library_names = new String[] { "OpenCL.dll" };
-				break;
-			case LWJGLUtil.PLATFORM_LINUX:
-				libname = "OpenCL";
-				library_names = new String[] { "libOpenCL64.so", "libOpenCL.so" }; // TODO: Fix this
-				break;
-			case LWJGLUtil.PLATFORM_MACOSX:
-				libname = "OpenCL";
-				library_names = new String[] { "OpenCL.dylib" }; // TODO: Fix this
-				break;
-			default:
-				throw new LWJGLException("Unknown platform: " + LWJGLUtil.getPlatform());
-		}
+        final String libname;
+        final String[] library_names;
+        switch (LWJGLUtil.getPlatform().getType()) {
+            case WINDOWS:
+                libname = "OpenCL";
+                library_names = new String[]{"OpenCL.dll"};
+                break;
+            case LINUX:
+                libname = "OpenCL";
+                library_names = new String[]{"libOpenCL64.so", "libOpenCL.so"}; // TODO: Fix this
+                break;
+            case MACOSX:
+                libname = "OpenCL";
+                library_names = new String[]{"OpenCL.dylib"}; // TODO: Fix this //Hmm figure out what fix this means.
+                break;
+            default:
+                throw new LWJGLException("Unknown platform: " + LWJGLUtil.getPlatform());
+        }
 
-		final String[] oclPaths = LWJGLUtil.getLibraryPaths(libname, library_names, CL.class.getClassLoader());
-		LWJGLUtil.log("Found " + oclPaths.length + " OpenCL paths");
-		for ( String oclPath : oclPaths ) {
-			try {
-				nCreate(oclPath);
-				created = true;
-				break;
-			} catch (LWJGLException e) {
-				LWJGLUtil.log("Failed to load " + oclPath + ": " + e.getMessage());
-			}
-		}
+        final String[] oclPaths = LWJGLUtil.getLibraryPaths(libname, library_names, CL.class.getClassLoader());
+        LWJGLUtil.log("Found " + oclPaths.length + " OpenCL paths");
+        for (String oclPath : oclPaths) {
+            try {
+                nCreate(oclPath);
+                created = true;
+                break;
+            } catch (LWJGLException e) {
+                LWJGLUtil.log("Failed to load " + oclPath + ": " + e.getMessage());
+            }
+        }
 
-		if ( !created && LWJGLUtil.getPlatform() == LWJGLUtil.PLATFORM_MACOSX ) {
-			// Try to load OpenCL from the framework instead
-			nCreateDefault();
-			created = true;
-		}
+        if (!created && LWJGLUtil.getPlatform().isMacOSX()) {
+            // Try to load OpenCL from the framework instead
+            nCreateDefault();
+            created = true;
+        }
 
-		if ( !created )
-			throw new LWJGLException("Could not locate OpenCL library.");
+        if (!created) {
+            throw new LWJGLException("Could not locate OpenCL library.");
+        }
 
-		if ( !CLCapabilities.OpenCL10 )
-			throw new RuntimeException("OpenCL 1.0 not supported.");
-	}
+        if (!CLCapabilities.OpenCL10) {
+            throw new RuntimeException("OpenCL 1.0 not supported.");
+        }
+    }
 
-	public static void destroy() {
-	}
+    public static void destroy() {
+    }
 
-	/**
-	 * Helper method to get a pointer to a named function with aliases in the OpenCL library.
-	 *
-	 * @param aliases the function name aliases.
-	 *
-	 * @return the function pointer address
-	 */
-	static long getFunctionAddress(String[] aliases) {
-		for ( String aliase : aliases ) {
-			long address = getFunctionAddress(aliase);
-			if ( address != 0 )
-				return address;
-		}
-		return 0;
-	}
+    /**
+     * Helper method to get a pointer to a named function with aliases in the
+     * OpenCL library.
+     *
+     * @param aliases the function name aliases.
+     *
+     * @return the function pointer address
+     */
+    static long getFunctionAddress(String[] aliases) {
+        for (String aliase : aliases) {
+            long address = getFunctionAddress(aliase);
+            if (address != 0) {
+                return address;
+            }
+        }
+        return 0;
+    }
 
-	/** Helper method to get a pointer to a named function in the OpenCL library. */
-	static long getFunctionAddress(String name) {
-		ByteBuffer buffer = MemoryUtil.encodeASCII(name);
-		return ngetFunctionAddress(MemoryUtil.getAddress(buffer));
-	}
-	private static native long ngetFunctionAddress(long name);
+    /**
+     * Helper method to get a pointer to a named function in the OpenCL library.
+     */
+    static long getFunctionAddress(String name) {
+        ByteBuffer buffer = MemoryUtil.encodeASCII(name);
+        return ngetFunctionAddress(MemoryUtil.getAddress(buffer));
+    }
 
-	static native ByteBuffer getHostBuffer(final long address, final int size);
+    private static native long ngetFunctionAddress(long name);
 
-	private static native void resetNativeStubs(Class clazz);
+    static native ByteBuffer getHostBuffer(final long address, final int size);
+
+    private static native void resetNativeStubs(Class clazz);
 
 }

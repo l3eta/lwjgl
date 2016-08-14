@@ -38,235 +38,268 @@ import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
-
+import org.lwjgl.SysPlatform.ArchType;
 import org.lwjgl.input.Mouse;
 
 /**
  * <p>
  * System class (named Sys so as not to conflict with java.lang.System)
  * </p>
+ *
  * @author cix_foo <cix_foo@users.sourceforge.net>
- * @version $Revision$
- * $Id$
+ * @version $Revision$ $Id$
  */
 public final class Sys {
-	/** The native library name */
-	private static final String JNI_LIBRARY_NAME = "lwjgl";
 
-	/** Current version of library */
-	private static final String VERSION = "2.9.4";
+    /**
+     * The native library name
+     */
+    private static final String JNI_LIBRARY_NAME = "lwjgl";
 
-	private static final String POSTFIX64BIT = "64";
+    /**
+     * Current version of library
+     */
+    private static final String VERSION = "2.9.4";
 
-	/** The implementation instance to delegate platform specific behavior to */
-	private static final SysImplementation implementation;
-	private static final boolean is64Bit;
+    private static final String POSTFIX64BIT = "64";
 
-	private static void doLoadLibrary(final String lib_name) {
-		AccessController.doPrivileged(new PrivilegedAction<Object>() {
-			public Object run() {
-				String library_path = System.getProperty("org.lwjgl.librarypath");
-				if (library_path != null) {
-					System.load(library_path + File.separator + LWJGLUtil.mapLibraryName(lib_name));
-				} else {
-					System.loadLibrary(lib_name);
-				}
-				return null;
-			}
-		});
-	}
+    /**
+     * The implementation instance to delegate platform specific behavior to
+     */
+    private static final SysImplementation implementation;
+    private static final boolean is64Bit;
 
-	private static void loadLibrary(final String lib_name) {
-		// actively try to load 64bit libs on 64bit architectures first
-		String osArch = System.getProperty("os.arch");
-		boolean try64First = LWJGLUtil.getPlatform() != LWJGLUtil.PLATFORM_MACOSX && ("amd64".equals(osArch) || "x86_64".equals(osArch));
+    private static void doLoadLibrary(final String lib_name) {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
+            public Object run() {
+                String library_path = System.getProperty("org.lwjgl.librarypath");
+                if (library_path != null) {
+                    System.load(library_path + File.separator + LWJGLUtil.mapLibraryName(lib_name));
+                } else {
+                    System.loadLibrary(lib_name);
+                }
+                return null;
+            }
+        });
+    }
 
-		Error err = null;
-		if ( try64First ) {
-			try {
-				doLoadLibrary(lib_name + POSTFIX64BIT);
-				return;
-			} catch (UnsatisfiedLinkError e) {
-				err = e;
-			}
-		}
-		
-		// fallback to loading the "old way"
-		try {
-			doLoadLibrary(lib_name);
-		} catch (UnsatisfiedLinkError e) {
-			if ( try64First )
-				throw err;
+    private static void loadLibrary(final String lib_name) {
+        final SysPlatform platform = LWJGLUtil.getPlatform();
+        //Test if we are arm if so try and load.
+        if (platform.getArch() == ArchType.ARM) {
+            try {
+                doLoadLibrary(lib_name + "arm");
+                return;
+            } catch (UnsatisfiedLinkError e) {
+                throw new RuntimeException("Failed to load ARM Library: " + lib_name, e);
+            }
+        }
+        Error err = null;
+        // actively try to load 64bit libs on 64bit architectures first
+        if (platform.getArch() == ArchType.X64) {
+            try {
+                doLoadLibrary(lib_name + POSTFIX64BIT);
+                return;
+            } catch (UnsatisfiedLinkError e) {
+                err = e;
+            }
+        }
 
-			if (implementation.has64Bit()) {
-				try {
-					doLoadLibrary(lib_name + POSTFIX64BIT);
-					return;
-				} catch (UnsatisfiedLinkError e2) {
-					LWJGLUtil.log("Failed to load 64 bit library: " + e2.getMessage());
-				}
-			}
+        // fallback to loading the "old way"
+        try {
+            doLoadLibrary(lib_name);
+        } catch (UnsatisfiedLinkError e) {
+            if (platform.getArch() == ArchType.X64) {
+                throw err;
+            }
+            //These don't quite make sense to me.
 
-			// Throw original error
-			throw e;
-		}
-	}
+            if (implementation.has64Bit()) {
+                try {
+                    doLoadLibrary(lib_name + POSTFIX64BIT);
+                    return;
+                } catch (UnsatisfiedLinkError e2) {
+                    LWJGLUtil.log("Failed to load 64 bit library: " + e2.getMessage());
+                }
+            }
 
-	static {
-		implementation = createImplementation();
-		loadLibrary(JNI_LIBRARY_NAME);
-		is64Bit = implementation.getPointerSize() == 8;
+            // Throw original error
+            throw e;
+        }
+    }
 
-		int native_jni_version = implementation.getJNIVersion();
-		int required_version = implementation.getRequiredJNIVersion();
-		if (native_jni_version != required_version)
-			throw new LinkageError("Version mismatch: jar version is '" + required_version +
-                             "', native library version is '" + native_jni_version + "'");
-		implementation.setDebug(LWJGLUtil.DEBUG);
-	}
+    static {
+        implementation = createImplementation();
+        loadLibrary(JNI_LIBRARY_NAME);
+        is64Bit = implementation.getPointerSize() == 8;
 
-	private static SysImplementation createImplementation() {
-		switch (LWJGLUtil.getPlatform()) {
-			case LWJGLUtil.PLATFORM_LINUX:
-				return new LinuxSysImplementation();
-			case LWJGLUtil.PLATFORM_WINDOWS:
-				return new WindowsSysImplementation();
-			case LWJGLUtil.PLATFORM_MACOSX:
-				return new MacOSXSysImplementation();
-			default:
-				throw new IllegalStateException("Unsupported platform");
-		}
-	}
+        int native_jni_version = implementation.getJNIVersion();
+        int required_version = implementation.getRequiredJNIVersion();
+        if (native_jni_version != required_version) {
+            throw new LinkageError("Version mismatch: jar version is '" + required_version + "', native library version is '" + native_jni_version + "'");
+        }
+        implementation.setDebug(LWJGLUtil.DEBUG);
+    }
 
-	/**
-	 * No constructor for Sys.
-	 */
-	private Sys() {
-	}
+    private static SysImplementation createImplementation() {
+        switch (LWJGLUtil.getPlatform().getType()) {
+            case LINUX:
+                return new LinuxSysImplementation();
+            case WINDOWS:
+                return new WindowsSysImplementation();
+            case MACOSX:
+                return new MacOSXSysImplementation();
+            default:
+                throw new IllegalStateException("Unsupported platform");
+        }
+    }
 
-	/**
-	 * Return the version of the core LWJGL libraries as a String.
-	 */
-	public static String getVersion() {
-		return VERSION;
-	}
+    /**
+     * No constructor for Sys.
+     */
+    private Sys() {
+    }
 
-	/**
-	 * Initialization. This is just a dummy method to trigger the static constructor.
-	 */
-	public static void initialize() {
-	}
+    /**
+     * Return the version of the core LWJGL libraries as a String.
+     *
+     * @return
+     */
+    public static String getVersion() {
+        return VERSION;
+    }
 
-	/** Returns true if a 64bit implementation was loaded. */
-	public static boolean is64Bit() {
-		return is64Bit;
-	}
+    /**
+     * Initialization. This is just a dummy method to trigger the static
+     * constructor.
+     */
+    public static void initialize() {
+    }
 
-	/**
-	 * Obtains the number of ticks that the hires timer does in a second. This method is fast;
-	 * it should be called as frequently as possible, as it recalibrates the timer.
-	 *
-	 * @return timer resolution in ticks per second or 0 if no timer is present.
-	 */
-	public static long getTimerResolution() {
-		return implementation.getTimerResolution();
-	}
+    /**
+     * Returns true if a 64bit implementation was loaded.
+     *
+     * @return
+     */
+    public static boolean is64Bit() {
+        return is64Bit;
+    }
 
-	/**
-	 * Gets the current value of the hires timer, in ticks. When the Sys class is first loaded
-	 * the hires timer is reset to 0. If no hires timer is present then this method will always
-	 * return 0.<p><strong>NOTEZ BIEN</strong> that the hires timer WILL wrap around.
-	 *
-	 * @return the current hires time, in ticks (always >= 0)
-	 */
-	public static long getTime() {
-		return implementation.getTime() & 0x7FFFFFFFFFFFFFFFL;
-	}
+    /**
+     * Obtains the number of ticks that the hires timer does in a second. This
+     * method is fast; it should be called as frequently as possible, as it
+     * recalibrates the timer.
+     *
+     * @return timer resolution in ticks per second or 0 if no timer is present.
+     */
+    public static long getTimerResolution() {
+        return implementation.getTimerResolution();
+    }
 
-	/**
-	 * Attempt to display a modal alert to the user. This method should be used
-	 * when a game fails to initialize properly or crashes out losing its display
-	 * in the process. It is provided because AWT may not be available on the target
-	 * platform, although on Mac and Linux and other platforms supporting AWT we
-	 * delegate the task to AWT instead of doing it ourselves.
-	 * <p>
-	 * The alert should display the title and the message and then the current
-	 * thread should block until the user dismisses the alert - typically with an
-	 * OK button click.
-	 * <p>
-	 * It may be that the user's system has no windowing system installed for some
-	 * reason, in which case this method may do nothing at all, or attempt to provide
-	 * some console output.
-	 *
-	 * @param title The title of the alert. We suggest using the title of your game.
-	 * @param message The message text for the alert.
-	 */
-	public static void alert(String title, String message) {
-		boolean grabbed = Mouse.isGrabbed();
-		if (grabbed) {
-			Mouse.setGrabbed(false);
-		}
-		if (title == null)
-			title = "";
-		if (message == null)
-			message = "";
-		implementation.alert(title, message);
-		if (grabbed) {
-			Mouse.setGrabbed(true);
-		}
-	}
+    /**
+     * Gets the current value of the hires timer, in ticks. When the Sys class
+     * is first loaded the hires timer is reset to 0. If no hires timer is
+     * present then this method will always return 0
+     * .<p>
+     * <strong>NOTEZ BIEN</strong> that the hires timer WILL wrap around.
+     *
+     * @return the current hires time, in ticks (always >= 0)
+     */
+    public static long getTime() {
+        return implementation.getTime() & 0x7FFFFFFFFFFFFFFFL;
+    }
 
-	/**
-	 * Open the system web browser and point it at the specified URL. It is recommended
-	 * that this not be called whilst your game is running, but on application exit in
-	 * a shutdown hook, as the screen resolution will not be reset when the browser is
-	 * brought into view.
-	 * <p>
-	 * There is no guarantee that this will work, nor that we can detect if it has
-	 * failed - hence we don't return success code or throw an Exception. This is just a
-	 * best attempt at opening the URL given - don't rely on it to work!
-	 * <p>
-	 * @param url The URL. Ensure that the URL is properly encoded.
-	 * @return false if we are CERTAIN the call has failed
-	 */
-	public static boolean openURL(String url) {
-		// Attempt to use Webstart if we have it available
-		try {
-			// Lookup the javax.jnlp.BasicService object
-			final Class<?> serviceManagerClass = Class.forName("javax.jnlp.ServiceManager");
-			Method lookupMethod = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-				public Method run() throws Exception {
-					return serviceManagerClass.getMethod("lookup", String.class);
-				}
-			});
-			Object basicService = lookupMethod.invoke(serviceManagerClass, new Object[] {"javax.jnlp.BasicService"});
-			final Class<?> basicServiceClass = Class.forName("javax.jnlp.BasicService");
-			Method showDocumentMethod = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-				public Method run() throws Exception {
-					return basicServiceClass.getMethod("showDocument", URL.class);
-				}
-			});
-			try {
-				Boolean ret = (Boolean)showDocumentMethod.invoke(basicService, new URL(url));
-				return ret;
-			} catch (MalformedURLException e) {
-				e.printStackTrace(System.err);
-				return false;
-			}
-		} catch (Exception ue) {
-			return implementation.openURL(url);
-		}
-	}
+    /**
+     * Attempt to display a modal alert to the user. This method should be used
+     * when a game fails to initialize properly or crashes out losing its
+     * display in the process. It is provided because AWT may not be available
+     * on the target platform, although on Mac and Linux and other platforms
+     * supporting AWT we delegate the task to AWT instead of doing it ourselves.
+     * <p>
+     * The alert should display the title and the message and then the current
+     * thread should block until the user dismisses the alert - typically with
+     * an OK button click.
+     * <p>
+     * It may be that the user's system has no windowing system installed for
+     * some reason, in which case this method may do nothing at all, or attempt
+     * to provide some console output.
+     *
+     * @param title The title of the alert. We suggest using the title of your
+     * game.
+     * @param message The message text for the alert.
+     */
+    public static void alert(String title, String message) {
+        boolean grabbed = Mouse.isGrabbed();
+        if (grabbed) {
+            Mouse.setGrabbed(false);
+        }
+        if (title == null) {
+            title = "";
+        }
+        if (message == null) {
+            message = "";
+        }
+        implementation.alert(title, message);
+        if (grabbed) {
+            Mouse.setGrabbed(true);
+        }
+    }
 
-	/**
-	 * Get the contents of the system clipboard. The system might not have a
-	 * clipboard (particularly if it doesn't even have a keyboard) in which case
-	 * we return null. Otherwise we return a String, which may be the empty
-	 * string "".
-	 *
-	 * @return a String, or null if there is no system clipboard.
-	 */
-	public static String getClipboard() {
-		return implementation.getClipboard();
-	}
+    /**
+     * Open the system web browser and point it at the specified URL. It is
+     * recommended that this not be called whilst your game is running, but on
+     * application exit in a shutdown hook, as the screen resolution will not be
+     * reset when the browser is brought into view.
+     * <p>
+     * There is no guarantee that this will work, nor that we can detect if it
+     * has failed - hence we don't return success code or throw an Exception.
+     * This is just a best attempt at opening the URL given - don't rely on it
+     * to work!
+     * <p>
+     * @param url The URL. Ensure that the URL is properly encoded.
+     * @return false if we are CERTAIN the call has failed
+     */
+    public static boolean openURL(String url) {
+        // Attempt to use Webstart if we have it available
+        try {
+            // Lookup the javax.jnlp.BasicService object
+            final Class<?> serviceManagerClass = Class.forName("javax.jnlp.ServiceManager");
+            Method lookupMethod = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+                @Override
+                public Method run() throws Exception {
+                    return serviceManagerClass.getMethod("lookup", String.class);
+                }
+            });
+            Object basicService = lookupMethod.invoke(serviceManagerClass, new Object[]{"javax.jnlp.BasicService"});
+            final Class<?> basicServiceClass = Class.forName("javax.jnlp.BasicService");
+            Method showDocumentMethod = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+                @Override
+                public Method run() throws Exception {
+                    return basicServiceClass.getMethod("showDocument", URL.class);
+                }
+            });
+            try {
+                Boolean ret = (Boolean) showDocumentMethod.invoke(basicService, new URL(url));
+                return ret;
+            } catch (MalformedURLException e) {
+                e.printStackTrace(System.err);
+                return false;
+            }
+        } catch (Exception ue) {
+            return implementation.openURL(url);
+        }
+    }
+
+    /**
+     * Get the contents of the system clipboard. The system might not have a
+     * clipboard (particularly if it doesn't even have a keyboard) in which case
+     * we return null. Otherwise we return a String, which may be the empty
+     * string "".
+     *
+     * @return a String, or null if there is no system clipboard.
+     */
+    public static String getClipboard() {
+        return implementation.getClipboard();
+    }
 }

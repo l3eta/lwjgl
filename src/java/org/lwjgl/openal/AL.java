@@ -37,212 +37,232 @@ import org.lwjgl.Sys;
 
 /**
  * <p>
- * The AL class implements the actual creation code for linking to the native library
- * OpenAL.
+ * The AL class implements the actual creation code for linking to the native
+ * library OpenAL.
  * </p>
  *
  * @author Brian Matzon <brian@matzon.dk>
- * @version $Revision$
- * $Id$
+ * @version $Revision$ $Id$
  */
 public final class AL {
-	/** ALCdevice instance. */
-	static ALCdevice device;
 
-	/** Current ALCcontext. */
-	static ALCcontext context;
+    /**
+     * ALCdevice instance.
+     */
+    static ALCdevice device;
 
-	/** Have we been created? */
-	private static boolean created;
+    /**
+     * Current ALCcontext.
+     */
+    static ALCcontext context;
 
-	static {
-		Sys.initialize();
-	}
+    /**
+     * Have we been created?
+     */
+    private static boolean created;
 
-	private AL() {
-	}
+    static {
+        Sys.initialize();
+    }
 
-	/**
-	 * Native method to create AL instance
-	 *
-	 * @param oalPath Path to search for OpenAL library
-	 */
-	private static native void nCreate(String oalPath) throws LWJGLException;
+    private AL() {
+    }
 
-	/**
-	 * Native method to create AL instance from the Mac OS X 10.4 OpenAL framework.
-	 * It is only defined in the Mac OS X native library.
-	 */
-	private static native void nCreateDefault() throws LWJGLException;
+    /**
+     * Native method to create AL instance
+     *
+     * @param oalPath Path to search for OpenAL library
+     */
+    private static native void nCreate(String oalPath) throws LWJGLException;
 
-	/**
-	 * Native method the destroy the AL
-	 */
-	private static native void nDestroy();
+    /**
+     * Native method to create AL instance from the Mac OS X 10.4 OpenAL
+     * framework. It is only defined in the Mac OS X native library.
+     */
+    private static native void nCreateDefault() throws LWJGLException;
 
-	/**
-	 * @return true if AL has been created
-	 */
-	public static boolean isCreated() {
-		return created;
-	}
+    /**
+     * Native method the destroy the AL
+     */
+    private static native void nDestroy();
 
-	/**
-	 * Creates an OpenAL instance. Using this constructor will cause OpenAL to
-	 * open the device using supplied device argument, and create a context using the context values
-	 * supplied.
-	 *
-	 * @param deviceArguments Arguments supplied to native device
-	 * @param contextFrequency Frequency for mixing output buffer, in units of Hz (Common values include 11025, 22050, and 44100).
-	 * @param contextRefresh Refresh intervalls, in units of Hz.
-	 * @param contextSynchronized Flag, indicating a synchronous context.*
-	 */
-	public static void create(String deviceArguments, int contextFrequency, int contextRefresh, boolean contextSynchronized)
-		throws LWJGLException {
-		create(deviceArguments, contextFrequency, contextRefresh, contextSynchronized, true);
-	}
+    /**
+     * @return true if AL has been created
+     */
+    public static boolean isCreated() {
+        return created;
+    }
 
-	/**
-	 * @param openDevice Whether to automatically open the device
-	 * @see #create(String, int, int, boolean)
-	 */
-	public static void create(String deviceArguments, int contextFrequency, int contextRefresh, boolean contextSynchronized, boolean openDevice)
-		throws LWJGLException {
+    /**
+     * Creates an OpenAL instance. Using this constructor will cause OpenAL to
+     * open the device using supplied device argument, and create a context
+     * using the context values supplied.
+     *
+     * @param deviceArguments Arguments supplied to native device
+     * @param contextFrequency Frequency for mixing output buffer, in units of
+     * Hz (Common values include 11025, 22050, and 44100).
+     * @param contextRefresh Refresh intervals, in units of Hz.
+     * @param contextSynchronized Flag, indicating a synchronous context.*
+     */
+    public static void create(String deviceArguments, int contextFrequency, int contextRefresh, boolean contextSynchronized)
+            throws LWJGLException {
+        create(deviceArguments, contextFrequency, contextRefresh, contextSynchronized, true);
+    }
 
-		if (created)
-			throw new IllegalStateException("Only one OpenAL context may be instantiated at any one time.");
-		String libname;
-		String[] library_names;
-		switch (LWJGLUtil.getPlatform()) {
-			case LWJGLUtil.PLATFORM_WINDOWS:
-				if ( Sys.is64Bit() ) {
-					libname = "OpenAL64";
-					library_names = new String[]{"OpenAL64.dll"};
-				} else {
-					libname = "OpenAL32";
-					library_names = new String[]{"OpenAL32.dll"};
-				}
-				break;
-			case LWJGLUtil.PLATFORM_LINUX:
-				libname = "openal";
-				library_names = new String[]{"libopenal64.so", "libopenal.so", "libopenal.so.0"};
-				break;
-			case LWJGLUtil.PLATFORM_MACOSX:
-				libname = "openal";
-				library_names = new String[]{"openal.dylib"};
-				break;
-			default:
-				throw new LWJGLException("Unknown platform: " + LWJGLUtil.getPlatform());
-		}
-		String[] oalPaths = LWJGLUtil.getLibraryPaths(libname, library_names, AL.class.getClassLoader());
-		LWJGLUtil.log("Found " + oalPaths.length + " OpenAL paths");
-		for ( String oalPath : oalPaths ) {
-			try {
-				nCreate(oalPath);
-				created = true;
-				init(deviceArguments, contextFrequency, contextRefresh, contextSynchronized, openDevice);
-				break;
-			} catch (LWJGLException e) {
-				LWJGLUtil.log("Failed to load " + oalPath + ": " + e.getMessage());
-			}
-		}
-		if (!created && LWJGLUtil.getPlatform() == LWJGLUtil.PLATFORM_MACOSX) {
-			// Try to load OpenAL from the framework instead
-			nCreateDefault();
-			created = true;
-			init(deviceArguments, contextFrequency, contextRefresh, contextSynchronized, openDevice);
-		}
-		if (!created)
-			throw new LWJGLException("Could not locate OpenAL library.");
-	}
+    /**
+     * @param deviceArguments
+     * @param contextFrequency
+     * @param contextSynchronized
+     * @param contextRefresh
+     * @param openDevice Whether to automatically open the device
+     * @throws org.lwjgl.LWJGLException
+     * @see #create(String, int, int, boolean)
+     */
+    public static void create(String deviceArguments, int contextFrequency, int contextRefresh, boolean contextSynchronized, boolean openDevice)
+            throws LWJGLException {
 
-	private static void init(String deviceArguments, int contextFrequency, int contextRefresh, boolean contextSynchronized, boolean openDevice) throws LWJGLException {
-		try {
-			AL10.initNativeStubs();
-			ALC10.initNativeStubs();
+        if (created) {
+            throw new IllegalStateException("Only one OpenAL context may be instantiated at any one time.");
+        }
+        String libname;
+        String[] library_names;
+        switch (LWJGLUtil.getPlatform().getType()) {
+            case WINDOWS:
+                if (Sys.is64Bit()) {
+                    libname = "OpenAL64";
+                    library_names = new String[]{"OpenAL64.dll"};
+                } else {
+                    libname = "OpenAL32";
+                    library_names = new String[]{"OpenAL32.dll"};
+                }
+                break;
+            case LINUX:
+                libname = "openal";
+                library_names = new String[]{
+                    "libopenal64.so",
+                    "libopenal.so",
+                    "libopenal.so.0",
+                    "libopenalarm.so"
+                };
+                break;
+            case MACOSX:
+                libname = "openal";
+                library_names = new String[]{"openal.dylib"};
+                break;
+            default:
+                throw new LWJGLException("Unknown platform: " + LWJGLUtil.getPlatform().getName());
+        }
+        String[] oalPaths = LWJGLUtil.getLibraryPaths(libname, library_names, AL.class.getClassLoader());
+        LWJGLUtil.log("Found " + oalPaths.length + " OpenAL paths");
+        for (String oalPath : oalPaths) {
+            try {
+                nCreate(oalPath);
+                created = true;
+                init(deviceArguments, contextFrequency, contextRefresh, contextSynchronized, openDevice);
+                break;
+            } catch (LWJGLException e) {
+                LWJGLUtil.log("Failed to load " + oalPath + ": " + e.getMessage());
+            }
+        }
+        if (!created && LWJGLUtil.getPlatform().isMacOSX()) {
+            // Try to load OpenAL from the framework instead
+            nCreateDefault();
+            created = true;
+            init(deviceArguments, contextFrequency, contextRefresh, contextSynchronized, openDevice);
+        }
+        if (!created) {
+            throw new LWJGLException("Could not locate OpenAL library.");
+        }
+    }
 
-			if(openDevice) {
-				device = ALC10.alcOpenDevice(deviceArguments);
-				if (device == null) {
-					throw new LWJGLException("Could not open ALC device");
-				}
+    private static void init(String deviceArguments, int contextFrequency, int contextRefresh, boolean contextSynchronized, boolean openDevice) throws LWJGLException {
+        try {
+            AL10.initNativeStubs();
+            ALC10.initNativeStubs();
 
-				if (contextFrequency == -1) {
-					context = ALC10.alcCreateContext(device, null);
-				} else {
-					context = ALC10.alcCreateContext(device,
-							ALCcontext.createAttributeList(contextFrequency, contextRefresh,
-								contextSynchronized ? ALC10.ALC_TRUE : ALC10.ALC_FALSE));
-				}
-				ALC10.alcMakeContextCurrent(context);
-			}
-		} catch (LWJGLException e) {
-			destroy();
-			throw e;
-		}
+            if (openDevice) {
+                device = ALC10.alcOpenDevice(deviceArguments);
+                if (device == null) {
+                    throw new LWJGLException("Could not open ALC device");
+                }
 
-		ALC11.initialize();
+                if (contextFrequency == -1) {
+                    context = ALC10.alcCreateContext(device, null);
+                } else {
+                    context = ALC10.alcCreateContext(device,
+                            ALCcontext.createAttributeList(contextFrequency, contextRefresh,
+                                    contextSynchronized ? ALC10.ALC_TRUE : ALC10.ALC_FALSE));
+                }
+                ALC10.alcMakeContextCurrent(context);
+            }
+        } catch (LWJGLException e) {
+            destroy();
+            throw e;
+        }
 
-		// Load EFX10 native stubs if ALC_EXT_EFX is supported.
-		// Is there any situation where the current device supports ALC_EXT_EFX and one
-		// later created by the user does not?
-		// Do we have to call resetNativeStubs(EFX10.class); somewhere? Not done for AL11
-		// either.
-		// This can either be here or in ALC11, since ALC_EXT_EFX indirectly requires AL 1.1
-		// for functions like alSource3i.
-		if (ALC10.alcIsExtensionPresent(device, EFX10.ALC_EXT_EFX_NAME)){
-		    EFX10.initNativeStubs();
-		}
-	}
+        ALC11.initialize();
 
-	/**
-	 * Creates an OpenAL instance. The empty create will cause OpenAL to
-	 * open the default device, and create a context using default values.
-	 * This method used to use default values that the OpenAL implementation
-	 * chose but this produces unexpected results on some systems; so now
-	 * it defaults to 44100Hz mixing @ 60Hz refresh.
-	 */
-	public static void create() throws LWJGLException {
-		create(null, 44100, 60, false);
-	}
+        // Load EFX10 native stubs if ALC_EXT_EFX is supported.
+        // Is there any situation where the current device supports ALC_EXT_EFX and one
+        // later created by the user does not?
+        // Do we have to call resetNativeStubs(EFX10.class); somewhere? Not done for AL11
+        // either.
+        // This can either be here or in ALC11, since ALC_EXT_EFX indirectly requires AL 1.1
+        // for functions like alSource3i.
+        if (ALC10.alcIsExtensionPresent(device, EFX10.ALC_EXT_EFX_NAME)) {
+            EFX10.initNativeStubs();
+        }
+    }
 
-	/**
-	 * Exit cleanly by calling destroy.
-	 */
-	public static void destroy() {
-		if (context != null) {
-			ALC10.alcMakeContextCurrent(null);
-			ALC10.alcDestroyContext(context);
-			context = null;
-		}
-		if (device != null) {
-			boolean result = ALC10.alcCloseDevice(device);
-			device = null;
-		}
-		resetNativeStubs(AL10.class);
-		resetNativeStubs(AL11.class);
-		resetNativeStubs(ALC10.class);
-		resetNativeStubs(ALC11.class);
-		resetNativeStubs(EFX10.class);
+    /**
+     * Creates an OpenAL instance. The empty create will cause OpenAL to open
+     * the default device, and create a context using default values. This
+     * method used to use default values that the OpenAL implementation chose
+     * but this produces unexpected results on some systems; so now it defaults
+     * to 44100Hz mixing @ 60Hz refresh.
+     */
+    public static void create() throws LWJGLException {
+        create(null, 44100, 60, false);
+    }
 
-		if (created)
-			nDestroy();
-		created = false;
-	}
+    /**
+     * Exit cleanly by calling destroy.
+     */
+    public static void destroy() {
+        if (context != null) {
+            ALC10.alcMakeContextCurrent(null);
+            ALC10.alcDestroyContext(context);
+            context = null;
+        }
+        if (device != null) {
+            boolean result = ALC10.alcCloseDevice(device);
+            device = null;
+        }
+        resetNativeStubs(AL10.class);
+        resetNativeStubs(AL11.class);
+        resetNativeStubs(ALC10.class);
+        resetNativeStubs(ALC11.class);
+        resetNativeStubs(EFX10.class);
 
-	private static native void resetNativeStubs(Class clazz);
+        if (created) {
+            nDestroy();
+        }
+        created = false;
+    }
 
-	/**
-	 * @return handle to the default AL context.
-	 */
-	public static ALCcontext getContext() {
-		return context;
-	}
+    private static native void resetNativeStubs(Class clazz);
 
-	/**
-	 * @return handle to the default AL device.
-	 */
-	public static ALCdevice getDevice() {
-		return device;
-	}
+    /**
+     * @return handle to the default AL context.
+     */
+    public static ALCcontext getContext() {
+        return context;
+    }
+
+    /**
+     * @return handle to the default AL device.
+     */
+    public static ALCdevice getDevice() {
+        return device;
+    }
 }

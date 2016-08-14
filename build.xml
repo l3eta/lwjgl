@@ -1,6 +1,8 @@
 <project name="LWJGL" default="all" basedir=".">
 
 	<property name="build.sysclasspath" value="last" />
+	<property name="java.target.source" value="1.7" />
+	<property name="java.target.binary" value="1.7" />
 
 	<import file="platform_build/build-definitions.xml"/>
 	<import file="platform_build/build-generator.xml"/>
@@ -208,7 +210,7 @@
 			<fileset dir="${lwjgl.bin}" excludes="${opengl-template-classes}">
 				<patternset id="lwjgl_es.package.pattern">
 					<include name="org/**/*"/>
-					<exclude name="org/lwjgl/d3d/**"/>
+					<exclude name="org/lwjgl/d3d/*d*"/>
 					<exclude name="org/lwjgl/test/**"/>
 					<exclude name="org/lwjgl/util/**"/>
 					<exclude name="org/lwjgl/examples/**"/>
@@ -462,7 +464,7 @@
 
 	<!-- Compiles the Java source code -->
 	<target name="compile" description="Compiles the java source code" depends="-initialize">
-		<javac debug="yes" destdir="${lwjgl.bin}" source="1.5" target="1.5" classpath="${lwjgl.lib}/jinput.jar:${lwjgl.lib}/AppleJavaExtensions.jar:${lwjgl.lib}/asm-debug-all.jar" taskname="core">
+		<javac debug="yes" destdir="${lwjgl.bin}" source="${java.target.source}" target="${java.target.binary}" classpath="${lwjgl.lib}/jinput.jar:${lwjgl.lib}/AppleJavaExtensions.jar:${lwjgl.lib}/asm-debug-all.jar" taskname="core">
             <!--<compilerarg value="-Xlint:unchecked"/>-->
 			<src path="${lwjgl.src}/java/"/>
 			<src path="${lwjgl.src}/generated/"/>
@@ -475,24 +477,36 @@
 			<include name="org/lwjgl/util/**"/>
 			<exclude name="org/lwjgl/util/generator/**"/>
 		</javac>
-		<javac debug="yes" srcdir="${lwjgl.src}/java/" destdir="${lwjgl.bin}" includes="org/lwjgl/test/**" source="1.5" target="1.5" taskname="test" />
-		<javac debug="yes" srcdir="${lwjgl.src}/java/" destdir="${lwjgl.bin}" includes="org/lwjgl/examples/**" source="1.5" target="1.5" taskname="examples" />
+		<javac debug="yes" srcdir="${lwjgl.src}/java/" destdir="${lwjgl.bin}" includes="org/lwjgl/test/**" source="${java.target.source}" target="${java.target.binary}" taskname="test" />
+		<javac debug="yes" srcdir="${lwjgl.src}/java/" destdir="${lwjgl.bin}" includes="org/lwjgl/examples/**" source="${java.target.source}" target="${java.target.binary}" taskname="examples" />
 	</target>
 
 	<target name="compile_native" depends="-initialize, headers, touch-version, version-mismatch" description="Compiles the native files">
+		<exec executable="uname" outputproperty="hwplatform">
+			<arg value="-m"/>
+		</exec>
+		
 		<condition property="lwjgl.platform.windows">
 			<os family="windows" />
 		</condition>
 		<antcall target="-compile_native_win32" />
-
-
+		
+		
 		<condition property="lwjgl.platform.arm">
-			<os name="Linux" />
+			<and>
+    			<os name="Linux"/>
+    			<equals arg1="${hwplatform}" arg2="armv7l"/>
+    		</and>
 		</condition>
 		<antcall target="-compile_native_arm" />
-
+		
 		<condition property="lwjgl.platform.linux">
-			<os name="Linux" />
+			<and>
+    			<os name="Linux"/>
+				<not>
+    				<equals arg1="${hwplatform}" arg2="armv7l"/>
+				</not>
+    		</and>
 		</condition>
 		<antcall target="-compile_native_linux" />
 
@@ -534,6 +548,8 @@
 		</copy>
 		<!-- headless issues <version-check platform="linux"/> -->
 	</target>
+	
+	<!-- Compiles LWJGL on Linux ARM platforms -->
 	<target name="-compile_native_arm" if="lwjgl.platform.arm">
 		<ant antfile="platform_build/arm_ant/build.xml" inheritAll="false"/>
 		<copy todir="${lwjgl.lib}/arm">
@@ -586,6 +602,11 @@
 			<os name="Linux"/>
 		</condition>
 		<antcall target="-compile_native_linux_es"/>
+		
+		<condition property="lwjgl.platform.arm">
+			<os name="Linux"/>
+		</condition>
+		<antcall target="-compile_native_arm_es"/>
 	</target>
 
 	<!-- Compiles LWJGL ES on Win32 platforms  -->
@@ -600,6 +621,13 @@
 	<target name="-compile_native_linux_es" if="lwjgl.platform.linux">
 		<ant antfile="platform_build/linux_ant/build_es.xml" inheritAll="false"/>
 		<copy todir="${lwjgl.lib}/linux">
+			<fileset dir="${lwjgl.bin}/lwjgles" includes="liblwjgl*.so"/>
+		</copy>
+	</target>
+	
+	<target name="-compile_native_arm_es" if="lwjgl.platform.linux">
+		<ant antfile="platform_build/arm_ant/build_es.xml" inheritAll="false"/>
+		<copy todir="${lwjgl.lib}/arm">
 			<fileset dir="${lwjgl.bin}/lwjgles" includes="liblwjgl*.so"/>
 		</copy>
 	</target>
@@ -684,7 +712,7 @@
 
 	<!-- Creates the Javadoc -->
 	<target name="javadoc" description="Creates javadoc from java source code">
-		<javadoc destdir="${lwjgl.docs}/javadoc" classpath="${lwjgl.lib}/jinput.jar" author="true" version="true" use="true" source="1.5" windowtitle="LWJGL API" useexternalfile="true">
+		<javadoc destdir="${lwjgl.docs}/javadoc" classpath="${lwjgl.lib}/jinput.jar" author="true" version="true" use="true" source="${java.target.source}" windowtitle="LWJGL API" useexternalfile="true">
 			<fileset refid="lwjgl.javadoc.fileset" />
 			<doctitle><![CDATA[<h1>Lightweight Java Game Toolkit</h1>]]></doctitle>
 			<bottom><![CDATA[<i>Copyright &#169; 2002-2009 lwjgl.org. All Rights Reserved.</i>]]></bottom>

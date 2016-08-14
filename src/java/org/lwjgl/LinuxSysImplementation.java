@@ -33,61 +33,73 @@ package org.lwjgl;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
-import java.lang.UnsatisfiedLinkError;
 
 /**
  *
  * @author elias_naur <elias_naur@users.sourceforge.net>
- * @version $Revision$
- * $Id$
+ * @version $Revision$ $Id$
  */
 final class LinuxSysImplementation extends J2SESysImplementation {
-	private static final int JNI_VERSION = 19;
 
-	static {
-		// Load libawt.so and libmawt.so, needed for libjawt.so
-		java.awt.Toolkit.getDefaultToolkit();
-		
-		// manually load libjawt.so into vm, needed since Java 7
-		AccessController.doPrivileged(new PrivilegedAction<Object>() {
-			public Object run() {
-				try {
-					System.loadLibrary("jawt");
-				} catch (UnsatisfiedLinkError e) {
-			        // catch and ignore an already loaded in another classloader 
-					// exception, as vm already has it loaded
-			    }
-				return null;
-			}
-		});
-	}
+    private static final String[] BROWSERS = {
+        "sensible-browser",
+        "xdg-open",
+        "google-chrome",
+        "chromium",
+        "firefox",
+        "iceweasel",
+        "mozilla",
+        "opera",
+        "konqueror",
+        "nautilus",
+        "galeon",
+        "netscape"
+    };
 
-	public int getRequiredJNIVersion() {
-		return JNI_VERSION;
-	}
+    private static final int JNI_VERSION = 19;
 
-	public boolean openURL(final String url) {
-		// Linux may as well resort to pure Java hackery, as there's no Linux native way of doing it
-		// right anyway.
+    static {
+        // Load libawt.so and libmawt.so, needed for libjawt.so
+        java.awt.Toolkit.getDefaultToolkit();
 
-		String[] browsers = {"sensible-browser", "xdg-open", "google-chrome", "chromium", "firefox", "iceweasel", "mozilla", "opera", "konqueror", "nautilus", "galeon", "netscape"};
+        // manually load libjawt.so into vm, needed since Java 7
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            public Object run() {
+                try {
+                    System.loadLibrary("jawt");
+                } catch (UnsatisfiedLinkError e) {
+                    // catch and ignore an already loaded in another classloader
+                    // exception, as vm already has it loaded
+                }
+                return null;
+            }
+        });
+    }
 
-		for ( final String browser : browsers ) {
-			try {
-				LWJGLUtil.execPrivileged(new String[] { browser, url });
-				return true;
-			} catch (Exception e) {
-				// Ignore
-				e.printStackTrace(System.err);
-			}
-		}
+    @Override
+    public int getRequiredJNIVersion() {
+        return JNI_VERSION;
+    }
 
-		// Seems to have failed
-		return false;
-	}
+    @Override
+    public boolean openURL(final String url) {
+        // Linux may as well resort to pure Java hackery, as there's no Linux native way of doing it
+        // right anyway.
+        for (final String browser : BROWSERS) {
+            try {
+                LWJGLUtil.execPrivileged(new String[]{browser, url});
+                return true;
+            } catch (Exception e) {
+                // Ignore
+                e.printStackTrace(System.err);
+            }
+        }
+        // Seems to have failed
+        return false;
+    }
 
-	public boolean has64Bit() {
-		return true;
-	}
+    @Override
+    public boolean has64Bit() {
+        return true;
+    }
 }

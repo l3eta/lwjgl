@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 
-<project name="lwjgl native code, linux" basedir="../../bin/lwjgles" default="compile">
+<project name="lwjgl native code, arm" basedir="../../bin/lwjgles" default="compile">
 	<property name="native" location="../../src/native"/>
-	<property name="libnamearm" value="liblwjglarm.so"/>
-	<property name="lib_folder" value="${lwjgl.lib}/linux"/>
-	<property name="libsarm" value="-L${lib_folder} -lEGL -L/usr/X11R6/lib -L/usr/X11/lib -lm -lX11 -lXext -lXcursor -lXrandr -lXxf86vm -lpthread -L${java.home}/lib/arm -ljawt" />	
-	<property name="cflags32" value="-O2 -Wall -c -fPIC -std=c99 -Wunused"/>
+	<property name="libname_arm" value="liblwjglarm_es.so"/>
+	<property name="lib_folder" value="${lwjgl.lib}/arm"/>
+	<property name="libs_arm" value="-L${lib_folder} -lEGL -L/usr/X11R6/lib -L/usr/X11/lib -lm -lX11 -lXext -lXcursor -lXrandr -lXxf86vm -lpthread -L${java.home}/lib/arm -ljawt" />	
+	<property name="cflags_arm" value="-O2 -Wall -c -fPIC -std=c99 -Wunused"/>
 
 	<target name="clean">
 		<delete>
@@ -16,23 +16,20 @@
 	</target>
 
     <target name="compile">
-	<exec executable="uname" outputproperty="hwplatform">
-		<arg value="-m"/>
-	</exec>
 	<condition property="cflags_pthread" value="-pthreads" else="-pthread">
 		<os name="SunOS" />
 	</condition>
-	<condition property="version_script_flags32" value="" else="-Wl,--version-script='${native}/linux/lwjgl.map'">
+	<condition property="version_script_flags_arm" value="" else="-Wl,--version-script='${native}/linux/lwjgl.map'">
 			<os name="SunOS" />
 	</condition>
-	<property name="linker_flagsarm" value="${version_script_flags32} -shared -O2 -Wall -o ${libnamearm} ${libsarm}"/>
-    	<antcall target="compilearm"/>
+	<property name="linker_flags_arm" value="${version_script_flags_arm} -shared -O2 -Wall -o ${libname_arm} ${libs_arm}"/>
+    	<antcall target="compile_arm"/>
     </target>
 
-    <target name="compilearm">
+    <target name="compile_arm">
     	<mkdir dir="arm"/>
     	<apply dir="arm" executable="gcc" skipemptyfilesets="true" failonerror="true">
-			<arg line="${cflagsarm} ${cflags_pthread}"/>
+			<arg line="${cflags_arm} ${cflags_pthread}"/>
 			<arg value="-I${java.home}/include"/>
 			<arg value="-I${java.home}/include/linux"/>
 			<arg value="-I${java.home}/../include"/>
@@ -53,11 +50,11 @@
 	    </apply>
 		<apply dir="." parallel="true" executable="gcc" failonerror="true">
 			<srcfile/>
-			<arg line="${linker_flagsarm}"/>
+			<arg line="${linker_flags_arm}"/>
 			<fileset dir="arm" includes="*.o"/>
 		</apply>
 		<apply dir="." parallel="true" executable="strip" failonerror="true">
-			<fileset file="${libnamearm}"/>
+			<fileset file="${libname_arm}"/>
 		</apply>
     </target>
 </project>

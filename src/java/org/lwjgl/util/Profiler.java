@@ -1,10 +1,11 @@
-/*
+/*gcc -Wall
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
 package org.lwjgl.util;
 
+import java.text.DecimalFormat;
 import java.util.Stack;
 
 /**
@@ -24,10 +25,6 @@ public class Profiler {
         public float getDifference() {
             return (end - start) / 1000000000.0f;
         }
-
-        public long getSeconds() {
-            return (long) (getDifference() * 1000L);
-        }
     }
 
     private static Stack<Profile> profiles = new Stack<>();
@@ -39,10 +36,15 @@ public class Profiler {
         profiles.push(profile);
     }
 
+    private static final DecimalFormat DF = new DecimalFormat("#.########");
+
+    ;
+
     public static void pop() {
         Profile profile = profiles.pop();
         profile.end = System.nanoTime();
-        String msg = Line.format("Profile: @0 took @1 seconds to complete", profile.name, profile.getSeconds());
+
+        String msg = Line.format("@0 took @1 seconds to complete", profile.name, DF.format(profile.getDifference()));
         System.err.println("[Profiler] " + msg);
 
     }

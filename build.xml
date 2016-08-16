@@ -89,7 +89,7 @@
         <antcall target="compile" />
         <antcall target="-createjars" />
 
-        <antcall target="-jars_NoDEP" />
+        <antcall target="-jars_nodep" />
         <antcall target="javadoc" />
         <antcall target="applet-release" />
 
@@ -115,16 +115,15 @@
 
 	<!-- Create ONLY the jar archives -->
 	<target name="jars" description="Creates the Java archives ONLY and places them in libs/" depends="-initialize, generate-all, compile, -createjars">
-		<antcall target="-jars_NoDEP" />
+		<antcall target="-jars_nodep" />
 	</target>
 
 	<!-- Create ONLY the jar archives for the ES build -->
-	<target name="jars_es" description="Creates the Java archives ONLY for the ES build and places them in libs/"
-	        depends="-initialize, generate-all, compile, -createjars_es">
-		<antcall target="-jars_NoDEP"/>
+	<target name="jars_es" description="Creates the Java archives ONLY for the ES build and places them in libs/" depends="-initialize, generate-all, compile, -createjars_es">
+		<antcall target="-jars_nodep"/>
 	</target>
 
-	<target name="-jars_NoDEP">
+	<target name="-jars_nodep">
 		<move todir="libs/">
 			<fileset dir="${lwjgl.temp}/jar">
 				<include name="*.jar"/>
@@ -196,8 +195,7 @@
 			<filterchain>
 				<tokenfilter delimoutput=",">
 					<stringtokenizer delims=";"/>
-					<replaceregex pattern="(.+)[.]java"
-					              replace="org/lwjgl/opengl/\1.class"/>
+					<replaceregex pattern="(.+)[.]java" replace="org/lwjgl/opengl/\1.class"/>
 				</tokenfilter>
 			</filterchain>
 		</loadfile>
@@ -212,6 +210,7 @@
 					<include name="org/**/*"/>
 					<exclude name="org/lwjgl/d3d/*d*"/>
 					<exclude name="org/lwjgl/test/**"/>
+					<include name="org/lwjgl/util/Profiler.java"/>
 					<exclude name="org/lwjgl/util/**"/>
 					<exclude name="org/lwjgl/examples/**"/>
 				</patternset>
@@ -385,42 +384,42 @@
 		<loadfile srcfile="${lwjgl.src}/java/org/lwjgl/WindowsSysImplementation.java" property="lwjgl.java.windows.version">
 			<filterchain>
 				<tokenfilter>
-	    		<containsstring contains="JNI_VERSION ="/>
+	    			<containsstring contains="JNI_VERSION ="/>
 				</tokenfilter>
 			</filterchain>
 		</loadfile>
 		<loadfile srcfile="${lwjgl.src}/java/org/lwjgl/LinuxSysImplementation.java" property="lwjgl.java.linux.version">
 			<filterchain>
 				<tokenfilter>
-	    		<containsstring contains="JNI_VERSION ="/>
+	    			<containsstring contains="JNI_VERSION ="/>
 				</tokenfilter>
 			</filterchain>
 		</loadfile>
 		<loadfile srcfile="${lwjgl.src}/java/org/lwjgl/MacOSXSysImplementation.java" property="lwjgl.java.macosx.version">
 			<filterchain>
 				<tokenfilter>
-	    		<containsstring contains="JNI_VERSION ="/>
+	    			<containsstring contains="JNI_VERSION ="/>
 				</tokenfilter>
 			</filterchain>
 		</loadfile>
 		<loadfile srcfile="${lwjgl.src.native}/windows/org_lwjgl_WindowsSysImplementation.h" property="lwjgl.native.windows.version">
 			<filterchain>
 				<tokenfilter>
-	    		<containsstring contains="#define org_lwjgl_WindowsSysImplementation_JNI_VERSION"/>
+	    			<containsstring contains="#define org_lwjgl_WindowsSysImplementation_JNI_VERSION"/>
 				</tokenfilter>
 			</filterchain>
 		</loadfile>
 		<loadfile srcfile="${lwjgl.src.native}/linux/org_lwjgl_LinuxSysImplementation.h" property="lwjgl.native.linux.version">
 			<filterchain>
 				<tokenfilter>
-	    		<containsstring contains="#define org_lwjgl_LinuxSysImplementation_JNI_VERSION"/>
+	    			<containsstring contains="#define org_lwjgl_LinuxSysImplementation_JNI_VERSION"/>
 				</tokenfilter>
 			</filterchain>
 		</loadfile>
 		<loadfile srcfile="${lwjgl.src.native}/macosx/org_lwjgl_MacOSXSysImplementation.h" property="lwjgl.native.macosx.version">
 			<filterchain>
 				<tokenfilter>
-	    		<containsstring contains="#define org_lwjgl_MacOSXSysImplementation_JNI_VERSION"/>
+	    			<containsstring contains="#define org_lwjgl_MacOSXSysImplementation_JNI_VERSION"/>
 				</tokenfilter>
 			</filterchain>
 		</loadfile>
@@ -491,7 +490,6 @@
 		</condition>
 		<antcall target="-compile_native_win32" />
 		
-		
 		<condition property="lwjgl.platform.arm">
 			<and>
     			<os name="Linux"/>
@@ -555,7 +553,7 @@
 		<copy todir="${lwjgl.lib}/arm">
 			<fileset dir="${lwjgl.bin}/lwjgl" includes="liblwjgl*.so"/>
 		</copy>
-		<!-- headless issues <version-check platform="linux"/> -->
+		<!-- headless issues <version-check platform="arm"/> -->
 	</target>
 
 	<!-- Compiles LWJGL on FreeBSD platforms -->
@@ -593,18 +591,29 @@
 	</target>
 
 	<target name="compile_native_es" depends="-initialize, headers, touch-version, version-mismatch" description="Compiles the native files">
+		<exec executable="uname" outputproperty="hwplatform">
+			<arg value="-m"/>
+		</exec>
 		<condition property="lwjgl.platform.windows">
 			<os family="windows"/>
 		</condition>
 		<antcall target="-compile_native_win32_es"/>
 
 		<condition property="lwjgl.platform.linux">
-			<os name="Linux"/>
+			<not>
+				<and>
+					<os name="Linux"/>
+					<equals arg1="${hwplatform}" arg2="armv7l"/>
+				</and>
+			</not>
 		</condition>
 		<antcall target="-compile_native_linux_es"/>
 		
 		<condition property="lwjgl.platform.arm">
-			<os name="Linux"/>
+			<and>
+    			<os name="Linux"/>
+    			<equals arg1="${hwplatform}" arg2="armv7l"/>
+    		</and>
 		</condition>
 		<antcall target="-compile_native_arm_es"/>
 	</target>
@@ -625,7 +634,7 @@
 		</copy>
 	</target>
 	
-	<target name="-compile_native_arm_es" if="lwjgl.platform.linux">
+	<target name="-compile_native_arm_es" if="lwjgl.platform.arm">
 		<ant antfile="platform_build/arm_ant/build_es.xml" inheritAll="false"/>
 		<copy todir="${lwjgl.lib}/arm">
 			<fileset dir="${lwjgl.bin}/lwjgles" includes="liblwjgl*.so"/>
@@ -637,19 +646,19 @@
 	</target>
 
 	<target name="pack200" description="Pack200 a jar file">
-     <pack200 src="${input}" destfile="${output}"/>
+     	<pack200 src="${input}" destfile="${output}"/>
 	</target>
 
 	<target name="lzma" description="LZMA compress a file">
-  	<java fork="true" classname="SevenZip.LzmaAlone">
+		<java fork="true" classname="SevenZip.LzmaAlone">
 			<classpath>
-      	<pathelement location="platform_build/JLzma.jar"/>
-      </classpath>
-      <jvmarg value="-Xmx512m"/>
-    	<arg value="e"/>
-    	<arg value="${input}"/>
-    	<arg value="${output}"/>
-   	</java>
+				<pathelement location="platform_build/JLzma.jar"/>
+		  </classpath>
+		  <jvmarg value="-Xmx512m"/>
+			<arg value="e"/>
+			<arg value="${input}"/>
+			<arg value="${output}"/>
+		</java>
 	</target>
 
 	<target name="compress-sign-class">
@@ -694,6 +703,12 @@
 
 		<condition property="native_path" value="libs/linux">
 			<or>
+				<and>
+    				<os name="Linux"/>
+					<not>
+    					<equals arg1="${hwplatform}" arg2="armv7l"/>
+					</not>
+    			</and>
 				<os name="Linux" />
 				<os name="SunOS" />
 			</or>
